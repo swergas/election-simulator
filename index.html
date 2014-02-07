@@ -1,0 +1,761 @@
+<!doctype html>
+<html lang="us">
+<head>
+	<meta charset="utf-8">
+	<title>Simulateur d'attribution de sièges aux élections proportionnelles utilisant la méthode de Hondt</title>
+	<link href="css/ui-lightness/jquery-ui-1.10.4.custom.css" rel="stylesheet">
+	<script src="js/jquery-1.10.2.js"></script>
+	<script src="js/jquery-ui-1.10.4.custom.js"></script>
+	<script>
+
+	
+	// features ideas:
+	// - importer des versions plus légères de jquery et jqueryui
+	// - afficher le tableau de divisions
+	// - ajouter des presets
+	// - trigger recalculs après change du slider moins souvent (parce que là ça rame)
+	// - corriger/réduire l'erreur d'arrondi pour maintenir le nombre de votes total fixe quelle que soit la situation (=> attibuer des votes à des listes 1 par 1)
+	// - implémenter d'autres méthodes d'attribution de sièges que celle de Hondt
+	// - import/export presets en JSON
+	// - i18n
+
+
+	var preset_european_parliament_2009_france_ile_de_france = {
+		name: "Résultats des élections Européennes 2009, circonscription Ile-de-France",
+		seats: 13,
+		votes: 2798120,
+		minimum_percent_required: 5,
+		lists : [
+			{
+				name: "Front national",
+				votes: 123199,
+				percent: 4.40,
+				seats: 0
+			},
+			{
+				name: "Cannabis sans frontières",
+				votes: 4015,
+				percent: 0.14,
+				seats: 0
+			},
+			{
+				name: "Pour une France et une Europe plus fraternelles",
+				votes: 6529,
+				percent: 0.23,
+				seats: 0
+			},
+			{
+				name: "L'Europe de Gibraltar à Jérusalem",
+				votes: 1197,
+				percent: 0.04,
+				seats: 0
+			},
+			{
+				name: "Communistes",
+				votes: 1050,
+				percent: 0.04,
+				seats: 0
+			},
+			{
+				name: "L'Europe c'est vous",
+				votes: 2792,
+				percent: 0.10,
+				seats: 0
+			},
+			{
+				name: "M. Patrick COSSERON DE VILLENOISY (LAUT)",
+				votes: 1317,
+				percent: 0.05,
+				seats: 0
+			},
+			{
+				name: "M. Alain MOURGUY (LAUT)",
+				votes: 755,
+				percent: 0.03,
+				seats: 0
+			},
+			{
+				name: "M. Jean-Marc GOVERNATORI (LAUT)",
+				votes: 83009,
+				percent: 2.97,
+				seats: 0
+			},
+			{
+				name: "Mme Elisabeth BARBAY (LAUT)",
+				votes: 3294,
+				percent: 0.12,
+				seats: 0
+			},
+			{
+				name: "M. Axel DE BOER (LAUT)",
+				votes: 4386,
+				percent: 0.16,
+				seats: 0
+			},
+			{
+				name: "M. Daniel COHN BENDIT (LVEC)",
+				votes: 583690,
+				percent: 20.86,
+				seats: 4
+			},
+			{
+				name: "M. Michel BARNIER (LMAJ)",
+				votes: 828172,
+				percent: 29.60,
+				seats: 5
+			},
+			{
+				name: "M. Jean-Pierre ENJALBERT (LDVD)",
+				votes: 68333,
+				percent: 2.44,
+				seats: 0
+			},
+			{
+				name: "M. Omar SLAOUTI (LEXG)",
+				votes: 97454,
+				percent: 3.48,
+				seats: 0
+			},
+			{
+				name: "Mme Annick DU ROSCOAT (LDVD)",
+				votes: 11700,
+				percent: 0.42,
+				seats: 0
+			},
+			{
+				name: "M. Jean-Pierre MERCIER (LEXG)",
+				votes: 20748,
+				percent: 0.74,
+				seats: 0
+			},
+			{
+				name: "M. Jean-Luc PASQUINET (LDVG)",
+				votes: 1015,
+				percent: 0.04,
+				seats: 0
+			},
+			{
+				name: "M. Dieudonné MBALA MBALA (LAUT)",
+				votes: 36374,
+				percent: 1.30,
+				seats: 0
+			},
+			{
+				name: "M. Alain DUCQ (LDVG)",
+				votes: 582,
+				percent: 0.02,
+				seats: 0
+			},
+			{
+				name: "M. Jérôme RIVIERE (LDVD)",
+				votes: 91814,
+				percent: 3.28,
+				seats: 0
+			},
+			{
+				name: "M. André LOCUSSOL (LAUT)",
+				votes: 1758,
+				percent: 0.06,
+				seats: 0
+			},
+			{
+				name: "Mme Françoise CASTANY (LAUT)",
+				votes: 28768,
+				percent: 1.03,
+				seats: 0
+			},
+			{
+				name: "M. Patrick LE HYARIC (LCOP)",
+				votes: 176862,
+				percent: 6.32,
+				seats: 1
+			},
+			{
+				name: "Mme Marianne RANKE-CORMIER (LAUT)",
+				votes: 1058,
+				percent: 0.04,
+				seats: 0
+			},
+			{
+				name: "M. Harlem DESIR (LSOC)",
+				votes: 379908,
+				percent: 13.58,
+				seats: 2
+			},
+			{
+				name: "Mme Marielle DE SARNEZ (LCMD)",
+				votes: 238341,
+				percent: 8.52,
+				seats: 1
+			},
+		],
+	};
+
+	var preset_european_parliament_2009_france_sud_est = {
+		name: "Résultats des élections Européennes 2009, circonscription Sud-Est",
+		seats: 13,
+		votes: 2939639,
+		minimum_percent_required: 5,
+		lists : [
+			{
+				name: "M. Jean-Luc BENNAHMIAS (LCMD)",
+				votes: 216630,
+				percent: 7.37,
+				seats: 1
+			},
+			{
+				name: "M. Jean-Marie LE PEN (LFN)",
+				votes: 249695,
+				percent: 8.49,
+				seats: 1
+			},
+			{
+				name: "M. Matthieu CHAUVIN (LAUT)",
+				votes: 4270,
+				percent: 0.15,
+				seats: 0
+			},
+			{
+				name: "M. Jérôme MEDEVILLE (LAUT)",
+				votes: 617,
+				percent: 0.02,
+				seats: 0
+			},
+			{
+				name: "Mme Nathalie ARTHAUD (LEXG)",
+				votes: 24727,
+				percent: 0.84,
+				seats: 0
+			},
+			{
+				name: "Mme Michèle VIANES (LDVD)",
+				votes: 58394,
+				percent: 1.99,
+				seats: 0
+			},
+			{
+				name: "Mme Michèle RIVASI (LVEC)",
+				votes: 537151,
+				percent: 18.27,
+				seats: 3
+			},
+			{
+				name: "M. Christian GARINO (LAUT)",
+				votes: 4286,
+				percent: 0.15,
+				seats: 0
+			},
+			{
+				name: "M. Daniel DUFRENEY (LDVD)",
+				votes: 354,
+				percent: 0.01,
+				seats: 0
+			},
+			{
+				name: "M. Raoul JENNAR (LEXG)",
+				votes: 127420,
+				percent: 4.33,
+				seats: 0
+			},
+			{
+				name: "M. Christophe RICERCHI (LEXG)",
+				votes: 593,
+				percent: 0.02,
+				seats: 0
+			},
+			{
+				name: "Mme Françoise GROSSETETE (LMAJ)",
+				votes: 862556,
+				percent: 29.34,
+				seats: 5
+			},
+			{
+				name: "M. Jacques GAUTRON (LDVD)",
+				votes: 626,
+				percent: 0.02,
+				seats: 0
+			},
+			{
+				name: "Mme Marie-Christine VERGIAT (LCOP)",
+				votes: 173576,
+				percent: 5.90,
+				seats: 1
+			},
+			{
+				name: "M. Philippe BARIOL (LDVG)",
+				votes: 136,
+				percent: 0,
+				seats: 0
+			},
+			{
+				name: "M. Dominique HAMEL (LAUT)",
+				votes: 606,
+				percent: 0.02,
+				seats: 0
+			},
+			{
+				name: "M. Patrick LOUIS (LDVD)",
+				votes: 126219,
+				percent: 4.29,
+				seats: 0
+			},
+			{
+				name: "M. Francis LALANNE (LAUT)",
+				votes: 110109,
+				percent: 3.75,
+				seats: 0
+			},
+			{
+				name: "Mme Annie VITAL (LDVG)",
+				votes: 1110,
+				percent: 0.04,
+				seats: 0
+			},
+			{
+				name: "M. Vincent PEILLON (LSOC)",
+				votes: 426043,
+				percent: 14.49,
+				seats: 2
+			},
+			{
+				name: "M. Victor Hugo ESPINOSA (LAUT)",
+				votes: 14521,
+				percent: 0.49,
+				seats: 0
+			},
+		],
+	};
+
+
+	var presets = [
+		preset_european_parliament_2009_france_ile_de_france,
+		preset_european_parliament_2009_france_sud_est,
+	];
+
+	function updateAllSlidersExcept ( me )
+	{
+		var sum = 0;
+		$('input.votes').not(me).each(function(){
+			sum += parseInt($(this).val());
+		});
+		$('input.votes').not(me).each(function(){
+			var fixed = $(this).parents(".list").children(".slider_fixed").first().is(':checked');
+			if ( fixed === true )
+				return;
+
+			var value_ratio = 1;
+			if ( sum > 0 )
+				value_ratio = $(this).val() / sum;
+
+			if ( me != null && me != undefined )
+				value_rest = getTotalVotes() - me.val();
+			else
+				value_rest = getTotalVotes();
+
+			$(this).val(value_ratio * value_rest);
+			updateMySlider ( $(this), $(this).val() );
+		});
+
+		checkSumVotes();
+	}
+
+	function checkSumVotes ()
+	{
+		var sum = 0;
+		$('input.votes').each(function(){
+			sum += parseInt($(this).val());
+		});
+
+		var theory = getTotalVotes();
+		var difference = sum - theory;
+
+		//var variation = Math.abs( sum - getTotalVotes() ) / Math.max( sum, getTotalVotes() );
+		var variation = ( sum - theory ) / theory; // positive or negative ratio
+		var hue; // will be from 0 (red) to 130 (green). will be red when abs(saturation) > 3%
+		hue = Math.min ( 3, Math.abs(variation) * 100 );
+		hue = (hue / 3);
+		hue = (1 - hue) * 130;
+		$("#total_votes_check").html("Erreur d'approximation : " + difference + " votes <span style='color: hsl(" + hue + ",100%,40%);'>(soit une variation de " + (variation*100) + " %)</span>");
+	}
+
+	function updateMySliderInput ( me, my_value )
+	{
+		var votes = me.parents(".slider_container").children('.votes');
+		votes.val(my_value);
+
+		//var votes = (my_value / 100) * getTotalVotes();
+		//me.parents(".slider_container").children('.votes').val(votes);
+
+		var percent = getPercentFromVotes ( my_value );
+		me.parents(".slider_container").children('.percent').val(percent);
+
+		updateAllSlidersExcept($(votes));
+	}
+
+	function updateMySlider ( me, my_value )
+	{
+		my_value = parseFloat(my_value);
+		me.parents(".slider_container").children('.slider').slider("value", my_value);
+		//var votes = (my_value / 100) * getTotalVotes();
+		var percent = getPercentFromVotes ( my_value );
+		me.parents(".slider_container").children('.percent').val(percent);
+	}
+
+	function getTotalVotes ()
+	{
+		return parseInt( $("#total_votes").val() );
+	}
+
+	/* not used
+	// percent: [0;100] (not a ratio)
+	function getVotesFromPercent ( percent )
+	{
+		var votes = Math.floor((my_value / 100) * getTotalVotes());
+		return votes;
+	}
+	*/
+
+	function getPercentFromVotes ( votes )
+	{
+		votes = parseInt(votes);
+		return (votes / getTotalVotes() ) * 100;
+	}
+
+	function addList ( name, votes, fixed )
+	{
+		if ( name == undefined )
+			name = "";
+		if ( votes == undefined )
+			votes = -1;
+		if ( fixed == undefined )
+			fixed = false;
+
+		var new_list_value;
+		if ( votes != -1 )
+			new_list_value = votes;
+		else
+		{
+			new_list_value = getTotalVotes();
+			$('#lists .list').each(function(){
+				//new_list_value -= parseFloat($(this).find("input.slider_input").val());
+				new_list_value -= parseInt($(this).find("input.votes").val());
+			});
+		}
+
+		var input_fixed_value = "";
+		if ( fixed == true )
+			input_fixed_value = " checked";
+
+		$("#lists").append('<div class="list">'
+			+'Nom : <input type="text" class="list_name" size="20" value="' + name + '" />'
+			+'<input type="submit" value="Supprimer" class="remove" />'
+			+'<br/>'
+			+'<div class="slider_container">'
+				+'Score : '
+				+'<input class="votes" type="text" value="' + new_list_value + '" size="6" /> votes, c\'est-à-dire '
+				+'<input class="percent" type="text" value="' + getPercentFromVotes(new_list_value) + '" size="4" /> % des voix'
+				+'<div class="slider"></div>'
+			+'</div>'
+			+'Verrouiller la valeur <input type="checkbox" class="slider_fixed"' + input_fixed_value + ' />'
+		+'</div>');
+		$("#lists .slider").last().slider({
+			min: 0,
+			max: getTotalVotes(),
+			range: "min",
+			animate: true,
+			value: new_list_value,
+			step: 1,
+			slide: function( event, ui ) {
+				updateMySliderInput( $(this), ui.value );
+			}
+		});
+		$("#lists input.votes").last().change(function () {
+		    updateMySlider( $(this), $(this).val() );
+		    updateAllSlidersExcept($(this));
+		});
+
+		$("#lists input.percent").last().change(function () {
+			// update votes value
+			var votes = ( $(this).val() / 100 ) * getTotalVotes();
+			var votes_input = $(this).parents(".slider_container").children('.votes');
+			$(votes_input).val(votes);
+
+			// cascade
+		    $(votes_input).trigger('change');
+		});
+
+		// TODO
+		// remove a list when button is clicked
+		$("#lists input.remove").last().click(function () {
+			$(this).parents(".list").remove();
+
+			// update results
+		    updateAllSlidersExcept(null);
+		});
+	}
+
+	function applyPreset ( preset )
+	{
+		clearLists();
+		$("#election_result").html("");
+		$('#seats').val( preset.seats );
+		$('#minimum_percent_required').val( preset.minimum_percent_required );
+		$('#total_votes').val( preset.votes );
+
+		for ( var i = 0; i < preset.lists.length; ++i )
+		{
+			var list = preset.lists[i];
+			addList ( list.name, list.votes, true ); // we load them locked so their value won't be changed on each add
+		}
+
+		// unlock lists
+		$(".list .slider_fixed").attr('checked', false);
+
+		checkSumVotes();
+	}
+
+	function clearLists ()
+	{
+		$("#lists").html(null);
+	}
+
+	function computeResultsWithDHondtMethod ( lists, seats )
+	{
+		//var total_votes = 0;
+		for ( var i = 0; i < lists.length; ++i )
+		{
+			//total_votes += lists[i].votes;
+			lists[i].seats = 0;
+		}
+
+
+		// create table, as in http://en.wikipedia.org/wiki/D%27Hondt_method#Allocation
+
+		var table = [];
+		for ( var row = 0; row < lists.length; ++row )
+		{
+			table[row] = [];
+		}
+
+		for ( var column = 0; column < seats; ++column )
+		{
+			for ( var row = 0; row < lists.length; ++row )
+			{
+				table[row][column] = lists[row].votes / (1 + column);
+			}
+		}
+
+		console.log(table);
+		//return lists;
+
+		// find the maximum value in the table, and repeat "seats" times
+
+		var max_value = 0;
+		var max_position_column = 0;
+		var max_position_row = 0;
+		var equalities = 0;
+		for ( var seats_given = 0; seats_given < seats; ++seats_given )
+		{
+			max_value = 0;
+			for ( var column = 0; column < seats; ++column )
+			{
+				for ( var row = 0; row < lists.length; ++row )
+				{
+					if ( table[row][column] > max_value )
+					{
+						max_value = table[row][column];
+						max_position_column = column;
+						max_position_row = row;
+					}
+				}
+			}
+
+			// check for equalities
+			var number_of_maxima = 0;
+			for ( var column = 0; column < seats; ++column )
+			{
+				for ( var row = 0; row < lists.length; ++row )
+				{
+					if ( table[row][column] == max_value )
+						++number_of_maxima;
+				}
+			}
+			if ( number_of_maxima > 1 )
+			{
+				++equalities;
+			}
+
+			// increment number of seats given to the list which has the max
+			if ( lists[max_position_row].seats == undefined || lists[max_position_row].seats == null )
+				lists[max_position_row].seats = 1;
+			else
+				lists[max_position_row].seats = lists[max_position_row].seats + 1;
+
+			// reset winning cell
+			table[max_position_row][max_position_column] = 0;
+		}
+
+		if ( equalities > 0 )
+		{
+			alert("Attention ! Il y a eu " + equalities + " égalité(s) pour l'attribution des sièges.");
+		}
+
+		return lists;
+	}
+
+	// make a JSON from current lists
+	function getJsonFromLists ()
+	{
+		var lists = [];
+		var i = 0;
+
+		$('.list').each(function(){
+			lists[i++] = {
+				name: $(this).children(".list_name").val(),
+				votes: parseInt($(this).children(".slider_container").children(".votes").val()),
+				//percent: 4.40,
+				seats: 0
+			};
+		});
+
+		return lists;
+	}
+
+	// function used to sort an array by the value of one of its fields
+	function predicatBy(prop)
+	{
+	   return function(a,b){
+	      if( a[prop] > b[prop]){
+	          return 1;
+	      }else if( a[prop] < b[prop] ){
+	          return -1;
+	      }
+	      return 0;
+	   }
+	}
+
+
+
+	$(function() {
+
+
+		$("#preset").change(function(){
+			applyPreset ( presets[$(this).val()] );
+		});
+
+
+		$("#list_add").click(function(){
+			addList();
+		});
+
+		for ( var i = 0; i < presets.length; ++i )
+		{
+			var name = presets[i].name;
+			$("#preset").append('<option value=' + i + '>' + name + '</option>');
+		}
+
+		
+		$("#compute").click(function(){
+			
+			var lists = getJsonFromLists();
+
+			console.log(lists);
+			//return;
+
+			var result_html = "<h2>Sièges attribués</h2>";
+			var lists_result = computeResultsWithDHondtMethod ( lists, parseInt( $("#seats").val() ) );
+			lists_result.sort( predicatBy("seats") );
+			lists_result.reverse();
+			for ( var i = 0; i < lists_result.length; ++i )
+			{
+				result_html += 'Liste "' + lists_result[i].name + '" : ' + lists_result[i].seats + " siège(s)<br/>";
+			}
+
+			$("#election_result").html(result_html);
+		});
+
+
+
+		// init
+
+		addList();
+		checkSumVotes ();
+		
+	});
+	</script>
+	<style>
+	.slider_container {
+		width: 100%;
+	}
+
+	.slider {
+		margin: 6px 10px;
+	}
+
+	.list {
+		margin-bottom: 20px;
+		background: #ddd;
+		padding: 10px;
+		margin: 10px;
+		width: 95%;
+	}
+	.list .remove {
+		float: right;
+	}
+	</style>
+</head>
+<body>
+
+<h2>Presets</h2>
+
+Charger un preset :
+
+<select id="preset">
+	<option value="none">Aucun</option>
+</select>
+
+<h2>Paramètres généraux</h2>
+
+
+Nombre de sièges à pourvoir : <input type="text" id="seats" value="13" size="6" />
+
+<br/>
+
+Les listes obtenant moins de <input type="text" id="minimum_percent_required" value="5" size="4" /> % des voix ne peuvent pas obtenir de représentant.
+
+<br/>
+
+Suffrages exprimés : <input type="text" id="total_votes" value="2798120" size="10" /> (= nombre de votes sauf blancs et nuls)
+
+
+
+<h2>Listes candidates</h2>
+
+<div id="lists">
+</div>
+
+
+<input type="submit" id="list_add" value="Ajouter une liste" />
+
+<br/>
+<br/>
+
+<div id="total_votes_check"></div>
+
+<br/>
+
+<input type="submit" id="compute" value="Calculer l'attribution de sièges" />
+
+<br/>
+
+<div id="election_result"></div>
+
+
+<h2>&Agrave; propos</h2>
+Simulateur d'élections utilisant la <a href="http://fr.wikipedia.org/wiki/Scrutin_proportionnel_plurinominal#M.C3.A9thode_d.27Hondt">méthode d'Hondt</a>. Inspiré de <a href="http://icon.cat/util/elections">http://icon.cat/util/elections</a>.
+<a href="http://www.interieur.gouv.fr/Elections/Les-resultats/Europeennes/elecresult__europeennes_2009/%28path%29/europeennes_2009/index.html">Résultats des élections européennes de 2009 en France</a>
+
+
+
+</body>
+</html>
